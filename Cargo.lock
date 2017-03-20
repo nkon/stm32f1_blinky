@@ -1,0 +1,4 @@
+[root]
+name = "stm32f1_blinky"
+version = "0.1.0"
+

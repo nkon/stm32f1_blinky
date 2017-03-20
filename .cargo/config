@@ -1,5 +1,5 @@
 [target.thumbv6m-none-eabi]
 rustflags = [
-    "-C", "link-arg=-Tlayout.ld",
+    "-C", "link-arg=-Tcubemx/STM32F103RBTx_FLASH.ld",
     "-C", "link-arg=-nostartfiles",
 ]
