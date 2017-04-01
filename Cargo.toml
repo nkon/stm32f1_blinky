@@ -2,5 +2,8 @@
 name = "stm32f1_blinky"
 version = "0.1.0"
 authors = ["KONDO Nobuhiro <kondou.nobuhiro@gmail.com>"]
+build = "build.rs"
 
 [dependencies]
+
+[build-dependencies]
