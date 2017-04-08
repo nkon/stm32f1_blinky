@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=/home/nkon/src/rust/stm32f1xx/cubemx/Inc
+HeaderPath=/home/nkon/src/rust/stm32f1_blinky/cubemx/Inc
 HeaderFiles=gpio.h;stm32f1xx_it.h;stm32f1xx_hal_conf.h;main.h;
-SourcePath=/home/nkon/src/rust/stm32f1xx/cubemx/Src
+SourcePath=/home/nkon/src/rust/stm32f1_blinky/cubemx/Src
 SourceFiles=gpio.h;stm32f1xx_it.h;stm32f1xx_hal_conf.h;main.h;gpio.c;stm32f1xx_it.c;stm32f1xx_hal_msp.c;main.c;
 
 [PreviousLibFiles]
