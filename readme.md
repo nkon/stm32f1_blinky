@@ -305,3 +305,5 @@ extern "C" fn eh_personality() {}
 * CubeMXが生成する`stm32f1xx_hal_conf.h`が必要になるので、どっかから持ってきておく。
 * `src/lib.rs` をエントリーポイントにして、ラッパーインタフェースを書く。
 
+![architecture.png](architecture.png)
+
