@@ -1,9 +1,10 @@
 #!/bin/sh
 
-DIR=target/thumbv6m-none-eabi/debug/deps/
+DIR=target/thumbv6m-none-eabi/debug
 
-ELF_FILE=${DIR}`ls -t ${DIR} | tail -1`
-## ELF_FILE=target/thumbv6m-none-eabi/debug/deps/stm32f1_blinky-bbd79dc6fc972825
+PROJECT=stm32f1_blinky
+
+ELF_FILE=${DIR}/${PROJECT}
 
 echo "Write $ELF_FILE"
 

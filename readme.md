@@ -210,6 +210,10 @@ target halted due to debug-request, current mode: Thread
 xPSR: 0x01000000 pc: 0x08000244 msp: 0x20005000
 ```
 
+## ライブラリ化
+
+共通部分を stm32cubef1とライブラリ化して、アプリ側では、Rustっぽく書きたい。
+
 ## 共通部分と個別部分
 
 $(APP_DIR)/cubemx/ に生成するが Drivers/ 以下は共通なので、$(APP_DIR)からは削除して良い。
