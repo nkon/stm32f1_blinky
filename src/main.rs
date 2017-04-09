@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 #![feature(lang_items)]
-#![feature(start)]
 #![feature(asm)]
 
 extern crate stm32cubef1;
@@ -9,8 +8,7 @@ use stm32cubef1::*;
 use stm32f1xx_hal_gpio::{GPIOA, GPIO_PIN_5};
 
 #[no_mangle]
-#[start]
-pub extern fn main() {
+pub extern fn rust_main() {
     stm32f1xx_hal_gpio::GPIOA_CLK_ENABLE();
 
     let mut gpio_init_struct = stm32f1xx_hal_gpio::GPIO_InitTypeDef{Pin: 0, Mode: 0, Pull: 0, Speed: 0};

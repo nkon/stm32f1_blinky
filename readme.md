@@ -135,7 +135,7 @@ fn main() {
 
 * out_dirの場所を抽出する。そのために必要なライブラリを `use`しておく。
 * `arm-none-eabi-as`を、引数を指定して実行する。
-* `arm-none-eabi-ar`で、オブジェクトをライブラリにまとめる。よくわからないが、たとえ一つであっても、ライブラリにまとめる。
+* `arm-none-eabi-ar`で、オブジェクトをライブラリにまとめる。よくわからないが、たとえ1つであっても、ライブラリにまとめる。
 * `rustc-link-lib`キーワードでリンクするライブラリを指定する。
 * `build.rs`が修正されたら再ビルドするように指定する。
 
@@ -212,105 +212,96 @@ xPSR: 0x01000000 pc: 0x08000244 msp: 0x20005000
 
 ## ライブラリ化
 
-共通部分を stm32cubef1とライブラリ化して、アプリ側では、Rustっぽく書きたい。
+共通部分を stm32cubef1というようにライブラリ化して、アプリ側では、Rustっぽく書きたい。
 
-## 共通部分と個別部分
-
-$(APP_DIR)/cubemx/ に生成するが Drivers/ 以下は共通なので、$(APP_DIR)からは削除して良い。
+### アプリ側
 
 ```
-stm32f1xx/
-├── Cargo.lock
-├── Cargo.toml
-├── cubemx/
-│   └── Drivers/
-│        ├── CMSIS/
-│        │   ├── Device/
-│        │   │   └── S/
-│        │   │       └── STM32F1xx/
-│        │   │           ├── Include/
-│        │   │           │   ├── stm32f103xb.h
-│        │   │           │   ├── stm32f1xx.h
-│        │   │           │   └── system_stm32f1xx.h
-│        │   │           └── Source/
-│        │   │               └── Templates/
-│        │   │                   └── gcc/
-│        │   └── Include/
-│        │       ├── arm_common_tables.h
-│        │       ├── arm_const_structs.h
-│        │       ├── arm_math.h
-│        │       ├── cmsis_armcc.h
-│        │       ├── cmsis_armcc_V6.h
-│        │       ├── cmsis_gcc.h
-│        │       ├── core_cm0.h
-│        │       ├── core_cm0plus.h
-│        │       ├── core_cm3.h
-│        │       ├── core_cm4.h
-│        │       ├── core_cm7.h
-│        │       ├── core_cmFunc.h
-│        │       ├── core_cmInstr.h
-│        │       ├── core_cmSimd.h
-│        │       ├── core_sc000.h
-│        │       └── core_sc300.h
-│        └── STM32F1xx_HAL_Driver/
-│            ├── Inc/
-│            │   ├── Legacy/
-│            │   │   └── stm32_hal_legacy.h
-│            │   ├── stm32f1xx_hal.h
-│            │   ├── stm32f1xx_hal_cortex.h
-│            │   ├── stm32f1xx_hal_def.h
-│            │   ├── stm32f1xx_hal_dma.h
-│            │   ├── stm32f1xx_hal_dma_ex.h
-│            │   ├── stm32f1xx_hal_flash.h
-│            │   ├── stm32f1xx_hal_flash_ex.h
-│            │   ├── stm32f1xx_hal_gpio.h
-│            │   ├── stm32f1xx_hal_gpio_ex.h
-│            │   ├── stm32f1xx_hal_pwr.h
-│            │   ├── stm32f1xx_hal_rcc.h
-│            │   ├── stm32f1xx_hal_rcc_ex.h
-│            │   ├── stm32f1xx_hal_tim.h
-│            │   └── stm32f1xx_hal_tim_ex.h
-│            └── Src/
-│                ├── stm32f1xx_hal.c
-│                ├── stm32f1xx_hal_cortex.c
-│                ├── stm32f1xx_hal_dma.c
-│                ├── stm32f1xx_hal_flash.c
-│                ├── stm32f1xx_hal_flash_ex.c
-│                ├── stm32f1xx_hal_gpio.c
-│                ├── stm32f1xx_hal_gpio_ex.c
-│                ├── stm32f1xx_hal_pwr.c
-│                ├── stm32f1xx_hal_rcc.c
-│                ├── stm32f1xx_hal_rcc_ex.c
-│                ├── stm32f1xx_hal_tim.c
-│                └── stm32f1xx_hal_tim_ex.c
-├── readme.md
-└── src/
-     ├── hal/
-     ├── lib.rs
-     └── rs/
-stm32f1_blinky/
-├── Cargo.lock
-├── Cargo.toml
-├── cubemx/
-│   ├── Inc/
+stm32f1_blinky
+├── cubemx
+│   ├── Inc
 │   │   ├── gpio.h
 │   │   ├── main.h
 │   │   ├── stm32f1xx_hal_conf.h
 │   │   └── stm32f1xx_it.h
 │   ├── STM32F103RBTx_FLASH.ld
-│   ├── Src/
+│   ├── Src
 │   │   ├── gpio.c
-│   │   ├── main.c
+│   │   ├── main.c                 main.c::main()から rust_mainを呼ぶ
 │   │   ├── stm32f1xx_hal_msp.c
 │   │   ├── stm32f1xx_it.c
-│   │   └── system_stm32f1xx.c
+│   │   ├── system_stm32f1xx.c
+│   │   └── systemclock_config.c
 │   ├── cubemx.ioc
-│   └── startup/
+│   └── startup
 │       └── startup_stm32f103xb.s
-├── readme.md
-└── src/
-     ├── main.rs
-     └── mx/
-         └── mod.rs
+├── src
+│   └── main.rs                    fn rust_main() から始まる
+                                       
 ```
+
+* CubeMX で生成。
+* CubeMX で生成した設定が、main() の前半で有効になる。
+* CubeMX で生成した main.c のなかの main() から rust_main()を呼ぶ。
+* src/main.rs の rust_main が RUST 側のエントリーポイント。
+* Cargo.toml でライブラリを呼ぶ。
+```
+[dependencies]
+stm32cubef1 = {path = "../stm32cubef1"}
+```
+
+`src/main.rs`はこんな感じ。
+
+```
+#![no_std]
+#![no_main]
+#![feature(lang_items)]
+#![feature(asm)]
+
+extern crate stm32cubef1;
+use stm32cubef1::*;
+use stm32f1xx_hal_gpio::{GPIOA, GPIO_PIN_5};
+
+#[no_mangle]
+pub extern fn rust_main() {
+    stm32f1xx_hal_gpio::GPIOA_CLK_ENABLE();
+
+    let mut gpio_init_struct = stm32f1xx_hal_gpio::GPIO_InitTypeDef{Pin: 0, Mode: 0, Pull: 0, Speed: 0};
+    gpio_init_struct.Pin = 0x0020;
+    gpio_init_struct.Mode = 0x0001;
+    gpio_init_struct.Speed = 0x0002;
+
+    stm32f1xx_hal_gpio::Init(GPIOA(), &gpio_init_struct);
+
+    loop {
+        stm32f1xx_hal_gpio::WritePin(GPIOA(), GPIO_PIN_5, 1);
+        for _ in 1..400000 {
+            unsafe {
+                asm!("");
+            }
+        }
+
+        stm32f1xx_hal_gpio::WritePin(GPIOA(), GPIO_PIN_5, 0);
+        for _ in 1..400000 {
+            unsafe {
+                asm!("");
+            }
+        }
+    }
+}
+
+#[lang="panic_fmt"]
+pub fn panic_fmt() -> ! {
+    loop {}
+}
+
+#[lang="eh_personality"]
+extern "C" fn eh_personality() {}
+```
+
+### ライブラリ側
+
+* `STM32Cube_FW`を展開してビルドする。
+* CubeMXが生成する`stm32f1xx_hal_conf.h`が必要になるので、どっかから持ってきておく。
+* `src/lib.rs` をエントリーポイントにして、ラッパーインタフェースを書く。
 

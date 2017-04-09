@@ -78,7 +78,7 @@ int main(void)
   MX_GPIO_Init();
 
   /* USER CODE BEGIN 2 */
-
+  rust_main();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -88,13 +88,6 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-	  for(i = 0; i < 1000000; i++){
-	  }
-	  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-	  for(i = 0; i < 1000000; i++){
-	  }
-	  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-
   }
   /* USER CODE END 3 */
 
