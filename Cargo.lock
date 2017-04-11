@@ -1,4 +1,11 @@
 [root]
 name = "stm32f1_blinky"
 version = "0.1.0"
+dependencies = [
+ "stm32cubef1 0.1.0",
+]
+
+[[package]]
+name = "stm32cubef1"
+version = "0.1.0"
 
