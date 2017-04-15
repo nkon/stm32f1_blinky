@@ -8,6 +8,8 @@ use stm32cubef1::*;
 use gpio;
 use gpio::{GPIOA};
 
+mod event;  // event module を使う。
+
 #[no_mangle]
 pub extern fn rust_main() {
 /*
@@ -30,10 +32,10 @@ pub extern fn HAL_SYSTICK_Callback() {
     unsafe {  // static mut を取り扱うのは unsafe になる -> BAD!!!
         COUNT = COUNT + 1;
         if COUNT == MODE {
-            GPIOA().WritePin(gpio::PIN_5, 1);
+            GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
         }
         if COUNT > (2*MODE) {
-            GPIOA().WritePin(gpio::PIN_5, 0);
+            GPIOA().WritePin(gpio::PIN_5, gpio::Level::Low);
             COUNT = 0;
         }
     }
