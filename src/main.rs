@@ -8,7 +8,7 @@ use stm32cubef1::*;
 use gpio;
 use gpio::{GPIOA};
 
-mod event;  // event module を使う。
+mod event;  // event.rs を読み込む。
 
 #[no_mangle]
 pub extern fn rust_main() {
@@ -27,10 +27,13 @@ pub extern fn rust_main() {
 static mut COUNT :u32 = 0;
 static mut MODE :u32 = 1000;
 
+const MASK_MAIN :u32 = 0x00010000;
+const EVENT_BUTTON :u32 = 0x0001;
+
 #[no_mangle]
 pub extern fn HAL_SYSTICK_Callback() {
-    unsafe {  // static mut を取り扱うのは unsafe になる -> BAD!!!
-        COUNT = COUNT + 1;
+    unsafe {
+        COUNT += 1;
         if COUNT == MODE {
             GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
         }
@@ -38,19 +41,22 @@ pub extern fn HAL_SYSTICK_Callback() {
             GPIOA().WritePin(gpio::PIN_5, gpio::Level::Low);
             COUNT = 0;
         }
+        match event::catch(MASK_MAIN) {
+            Some(EVENT_BUTTON) => 
+                if MODE == 1000 {
+                    MODE = 400;
+                } else {
+                    MODE = 1000;
+                },
+            _ => return ,
+        }
     }
 }
 
 #[no_mangle]
 pub extern fn HAL_GPIO_EXTI_Callback(gpio_pin: u16) {
     if gpio_pin == gpio::PIN_13 {
-        unsafe {
-            if MODE == 1000 {
-                MODE = 200;
-            } else {
-                MODE = 1000;
-            }
-        }
+        event::send(MASK_MAIN, EVENT_BUTTON);
     }
 }
 

@@ -368,7 +368,7 @@ extern "C" fn eh_personality() {}
 * `GIPOA.Init(...)`は C API の `GPIO_Init(GPIOA, GPIO_InitTypeDef)`に対応する。
   + レジスタの集合体である GPIO::TypeDef のトレイトとして Init API を定義することで、オブジェクト指向っぽく書ける。
   + GPIOA は GPIO::TypeDef のアドレスを指定したインスタンス。
-  + 実用上は、CubeMXが生成した gpio.c:MX_GPIO_Init()内でポートの設定が行われるので、このような初期化コードは、ほとんどの場合で不要だ。
+  + 実用上は、CubeMXが生成した gpio.c:MX_GPIO_Init()内でポートの設定が行われる。このような初期化コードは、ほとんどの場合で不要だ。
 * `GPIOA().Write(pin)`も、同様に`GPIO_Write(GPIOA,GPIO_Pin)`に対応する。
 * `HAL_SYSTICK_Callback()`,`HAL_GPIO_EXTI_Callback()`は、C API のコールバック。
   + `#[no_mangle]`で C から呼び出せるように mangling(名前修飾)をしない。
