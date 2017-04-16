@@ -67,7 +67,7 @@ impl Queue {
                     // マッチした時は、イベントを消す。
                     if (self.q[i] & 0xffff0000) == (mask & 0xffff0000) {
                         let ret = self.q[i] & 0x0000ffff;
-                        if i < self.length {
+                        if i < self.length {    // キューを詰める
                             for j in (i + 1)..self.length {
                                 if (0 < j) && (j < QUEUE_LENGTH) {
                                     self.q[j - 1] = self.q[j];
