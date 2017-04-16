@@ -1,10 +1,5 @@
 
-// use core::sync::atomic::AtomicIsize; なぜか使えないので、enum Lock を実装する。
-
-enum Lock {
-    Locked,
-    Unlocked,
-}
+use lock::Lock;
 
 const QUEUE_LENGTH: usize = 32;
 
@@ -19,23 +14,6 @@ static mut QUEUE: Queue = Queue {
     length: 0,
     lock: Lock::Unlocked,
 };
-
-impl Lock {
-    fn get_lock(&mut self) -> () {
-        loop {
-            match *self {
-                Lock::Locked => continue,
-                _ => {
-                    *self = Lock::Locked;
-                    break;
-                }
-            }
-        }
-    }
-    fn unlock(&mut self) -> () {
-        *self = Lock::Unlocked;
-    }
-}
 
 impl Queue {
     fn push(&mut self, obj: u32) -> bool {

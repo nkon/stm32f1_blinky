@@ -9,8 +9,8 @@ use gpio;
 use gpio::GPIOA;
 use pwr;
 
-mod event; // event.rs を読み込む。
-// mod delay;
+mod lock;   // event.rs のために、トップレベル(main.rs)で mod lock; を呼ばなければならない。
+mod event;
 
 static mut COUNT: u32 = 0;
 static mut MODE: u32 = 1000;
