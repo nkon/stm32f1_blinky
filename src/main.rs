@@ -8,30 +8,46 @@ use stm32cubef1::*;
 use gpio;
 use gpio::GPIOA;
 use pwr;
+use hal;
 
 mod lock;   // event.rs のために、トップレベル(main.rs)で mod lock; を呼ばなければならない。
 mod event;
+mod delay;
 
-static mut COUNT: u32 = 0;
-static mut MODE: u32 = 1000;
+// static mut COUNT: u32 = 0;
+// static mut MODE: u32 = 1000;
 
 const MASK_MAIN: u32 = 0x00010000;
 const EVENT_BUTTON: u32 = 0x0001;
+const EVENT_LED_ON: u32 = 0x0002;
+const EVENT_LED_OFF: u32 = 0x0003;
 
 #[no_mangle]
 pub extern "C" fn rust_main() {
     let mut mode = 1000;
-    loop {
-        // if let 構文を使う。
-        if let Some(EVENT_BUTTON) = event::catch(MASK_MAIN) {
-            if mode == 1000 {
-                mode = 500;
-            } else {
-                mode = 1000;
-            }
-        }
 
-        unsafe {MODE = mode;}
+    GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
+    delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
+
+    loop {
+        match event::catch(MASK_MAIN) {
+            Some(EVENT_BUTTON) => {
+                if mode == 1000 {
+                    mode = 200;
+                } else {
+                    mode = 1000;
+                }
+            },
+            Some(EVENT_LED_ON) => {
+                GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
+                delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
+            },
+            Some(EVENT_LED_OFF) => {
+                GPIOA().WritePin(gpio::PIN_5, gpio::Level::Low);
+                delay::send(mode, MASK_MAIN, EVENT_LED_ON);
+            },
+            _ => {},
+        }
 
         pwr::EnterSLEEPMode(pwr::SLEEPENTRY_WFI);
     }
@@ -40,15 +56,8 @@ pub extern "C" fn rust_main() {
 
 #[no_mangle]
 pub extern "C" fn HAL_SYSTICK_Callback() {
-    unsafe {
-        COUNT += 1;
-        if COUNT == MODE {
-            GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
-        }
-        if COUNT > (2 * MODE) {
-            GPIOA().WritePin(gpio::PIN_5, gpio::Level::Low);
-            COUNT = 0;
-        }
+    if let Some(ev) = delay::check_event(hal::GetTick()) {
+        event::send(ev,ev);
     }
 }
 
@@ -58,7 +67,6 @@ pub extern "C" fn HAL_GPIO_EXTI_Callback(gpio_pin: u16) {
         event::send(MASK_MAIN, EVENT_BUTTON);
     }
 }
-
 
 #[lang="panic_fmt"]
 pub fn panic_fmt() -> ! {
