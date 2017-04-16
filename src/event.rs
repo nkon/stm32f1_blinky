@@ -20,26 +20,35 @@ static mut QUEUE: Queue = Queue {
     lock: Lock::Unlocked,
 };
 
-impl Queue {
-    fn push(&mut self, obj: u32) -> bool {
-        if self.length == QUEUE_LENGTH - 1 {
-            false
-        } else {
-            loop {
-                match self.lock {
-                    Lock::Locked => continue,
-                    _ => {
-                        self.lock = Lock::Locked;
-                        break;
-                    }
+impl Lock {
+    fn get_lock(&mut self) -> () {
+        loop {
+            match *self {
+                Lock::Locked => continue,
+                _ => {
+                    *self = Lock::Locked;
+                    break;
                 }
             }
+        }
+    }
+    fn unlock(&mut self) -> () {
+        *self = Lock::Unlocked;
+    }
+}
+
+impl Queue {
+    fn push(&mut self, obj: u32) -> bool {
+        if self.length >= QUEUE_LENGTH - 1 {
+            false
+        } else {
+            self.lock.get_lock();
             // これが無ければビルドエラー(`abort`リンクエラー)
             if self.length < QUEUE_LENGTH {
                 self.q[self.length] = obj;
             }
             self.length += 1;
-            self.lock = Lock::Unlocked;
+            self.lock.unlock();
             true
         }
     }
@@ -50,18 +59,10 @@ impl Queue {
         } else if self.length > QUEUE_LENGTH {
             None
         } else {
-            loop {
-                match self.lock {
-                    Lock::Locked => continue,
-                    _ => {
-                        self.lock = Lock::Locked;
-                        break;
-                    }
-                }
-            }
+            self.lock.get_lock();
             for i in 0..self.length {
                 // これが無ければビルドエラー(`abort`リンクエラー)
-                // i < self.length <= QUEUE_LENGTH は見てない?
+                // i < self.length <= QUEUE_LENGTH は見てない? static mut だから?
                 if i < QUEUE_LENGTH {
                     // マッチした時は、イベントを消す。
                     if (self.q[i] & 0xffff0000) == (mask & 0xffff0000) {
@@ -74,18 +75,19 @@ impl Queue {
                             }
                         }
                         self.length -= 1;
-                        self.lock = Lock::Unlocked;
+                        self.lock.unlock();
                         return Some(ret);
+
                     // そうで無ければ、フラグを落とす。
                     } else if (self.q[i] & mask) != 0 {
                         let ret = self.q[i] & 0x0000ffff;
                         self.q[i] = self.q[i] & !mask;
-                        self.lock = Lock::Unlocked;
+                        self.lock.unlock();
                         return Some(ret);
                     }
                 }
             }
-            self.lock = Lock::Unlocked;
+            self.lock.unlock();
             None // 見つからなかった
         }
     }

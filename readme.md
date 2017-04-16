@@ -210,6 +210,8 @@ target halted due to debug-request, current mode: Thread
 xPSR: 0x01000000 pc: 0x08000244 msp: 0x20005000
 ```
 
+リポジトリでは`flash.sh`というシェルスクリプトにしてある。
+
 ## ライブラリ化
 
 共通部分を stm32cubef1というようにライブラリ化して、アプリ側では、Rustっぽく書きたい。
@@ -387,3 +389,36 @@ extern "C" fn eh_personality() {}
 
 ![architecture.png](architecture.png)
 
+## イベントの送受信
+
+割り込み側とアプリ側で情報をやり取りするのに、グローバル変数ではあまりにも危険だ。Rustの保護機構も働かず、`unsafe`だらけのコードになってしまう。簡単なイベント機構を作って、安全にやり取りできるようにしたい。
+
+```
+@startuml
+
+hide footbox
+participant sender
+participant event_queue
+participant recv1
+participant recv2
+
+sender -> event_queue : send(recv1, event)
+activate event_queue
+recv2 -> event_queue : catch()
+event_queue -> recv2 : None
+note right : maskが合致しないといけない
+recv1 -> event_queue : catch()
+event_queue -> recv1 : Some(event)
+deactivate event_queue
+
+sender -> event_queue : send(recv1|recv2, event)
+activate event_queue
+recv2 -> event_queue : catch()
+event_queue -> recv2 : Some(event)
+note right : 複数宛先があるときは\n全部の受領者が受け取るまでキューに残る
+recv1 -> event_queue : catch()
+event_queue -> recv1 : Some(event)
+deactivate event_queue
+
+@enduml
+```
