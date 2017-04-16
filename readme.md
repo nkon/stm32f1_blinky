@@ -800,4 +800,27 @@ pub extern "C" fn HAL_GPIO_EXTI_Callback(gpio_pin: u16) {
   + このままでは、1[ms]*2^32=49.7[day]後に誤動作する。昔のWindowsみたいだ。
   + 比較方法を改良すれば対応できるが、今はサボっている。
 
-  
+### is_after()
+
+オーバーフローを前提とした前後判別ルーチンとして、delay＜0xC000_0000 という実用上あまり問題にならない条件を付けることで便利に使える、次のものを使っている。
+
+```
+fn is_after(target:u32, now:u32) -> bool {
+    if (target < 0x4000_0000) && (now >= 0xc000_0000) {
+        false
+    } else if target >= 0xc000_0000 {
+        if now < 0x8000_0000 {
+            true
+        } else if target < now {
+            true
+        } else {
+            false
+        }
+    } else if target < now {
+        true
+    } else {
+        false
+    }
+}
+```
+![is_after.png](is_after.png)

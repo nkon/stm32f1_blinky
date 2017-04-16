@@ -49,9 +49,9 @@ impl Queue {
                 // これが無ければビルドエラー(`abort`リンクエラー)
                 // i < self.length <= QUEUE_LENGTH は見てない? static mut だから?
                 if i < QUEUE_LENGTH {
-                    if self.q[i].tick <= time {
+                    if is_after(self.q[i].tick, time) {
                         let ret = self.q[i].ev;
-                        if i < self.length {
+                        if i < self.length {    // キューを詰める
                             for j in (i + 1)..self.length {
                                 if (0 < j) && (j < QUEUE_LENGTH) {
                                     self.q[j - 1] = self.q[j];
@@ -70,6 +70,25 @@ impl Queue {
     }
 }
 
+fn is_after(target:u32, now:u32) -> bool {
+    if (target < 0x4000_0000) && (now >= 0xc000_0000) {
+        false
+    } else if target >= 0xc000_0000 {
+        if now < 0x8000_0000 {
+            true
+        } else if target < now {
+            true
+        } else {
+            false
+        }
+    } else if target < now {
+        true
+    } else {
+        false
+    }
+}
+
+
 /// キューに溜まっているイベントをスキャンして、
 /// time(通常は現在時刻 `hal::GetTick()`が渡される)が超過していたらイベント有り。Some(イベント)を返す。
 /// マッチするイベントがなければ None を返す。
@@ -79,8 +98,12 @@ pub fn check_event(time: u32) -> Option<u32> {
 
 
 /// delay[ms]後に向かってイベントを送る
+/// delay < 0x4000_0000 のこと!!!
 pub fn send(delay: u32, mask: u32, event :u32) -> () {
-    let obj = (mask & 0xffff0000) | (event & 0x0000ffff);
+    let obj = (mask & 0xffff_0000) | (event & 0x0000_ffff);
+    if delay >= 0x4000_0000 {
+        return;
+    }
     unsafe {
         QUEUE.push(Event{tick: delay + hal::GetTick(), ev:obj});
     }
