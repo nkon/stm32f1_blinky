@@ -14,9 +14,6 @@ mod lock;   // event.rs のために、トップレベル(main.rs)で mod lock; 
 mod event;
 mod delay;
 
-// static mut COUNT: u32 = 0;
-// static mut MODE: u32 = 1000;
-
 const MASK_MAIN: u32 = 0x00010000;
 const EVENT_BUTTON: u32 = 0x0001;
 const EVENT_LED_ON: u32 = 0x0002;

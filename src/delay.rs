@@ -70,18 +70,15 @@ impl Queue {
     }
 }
 
-
-/// イベントを受信する。
 /// キューに溜まっているイベントをスキャンして、
-/// マスク部を OR して not 0 ならイベント有り。Some(イベント)を返す。
+/// time(通常は現在時刻 `hal::GetTick()`が渡される)が超過していたらイベント有り。Some(イベント)を返す。
 /// マッチするイベントがなければ None を返す。
 pub fn check_event(time: u32) -> Option<u32> {
     unsafe { QUEUE.pop_after(time) }
 }
 
 
-/// 宛先を指定せずにイベントを送る。
-/// 上位16bitはマスク、下位16bitはイベント値。
+/// delay[ms]後に向かってイベントを送る
 pub fn send(delay: u32, mask: u32, event :u32) -> () {
     let obj = (mask & 0xffff0000) | (event & 0x0000ffff);
     unsafe {

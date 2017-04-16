@@ -559,6 +559,7 @@ pub fn send(mask: u32, event: u32) -> () {
 * queue の実装とうまく分離できていない。
 * `#![no_std]`環境だと `vec`が使えないので、自前で実装する。
 * バカサーチなので効率は悪い。
+* 配列をスキャンするとき、オーバーランしそうなコードだと、チェック＆アボートのコードが挿入されるのか、`abort()`がない、というリンクエラーとなる。Rustっぽい。
 
 `main.rs`は次のとおり。
 
@@ -628,5 +629,175 @@ pub extern "C" fn HAL_GPIO_EXTI_Callback(gpio_pin: u16) {
 * `rust_main()`はすっきりしてきた。
 * ついでに、`if let`構文を使ってみた。
 
+### delay.rs
+
+`HAL_SYSTICK_Callback()`でいろいろな、具体的作業をしているのは好ましくない。遅延イベントを実装して、SysTickは、それをハンドリングさせる。
+
+```
+use lock::Lock;
+use hal;
+
+const QUEUE_LENGTH: usize = 32;
+
+#[derive(Clone,Copy)]
+struct Event {
+    tick: u32,
+    ev: u32,
+}
+
+struct Queue {
+    q: [Event; QUEUE_LENGTH],
+    length: usize,
+    lock: Lock,
+}
+
+static mut QUEUE: Queue = Queue {
+    q: [Event{tick:0,ev:0}; QUEUE_LENGTH],
+    length: 0,
+    lock: Lock::Unlocked,
+};
+
+impl Queue {
+    fn push(&mut self, obj: Event) -> bool {
+        if self.length >= QUEUE_LENGTH - 1 {
+            false
+        } else {
+            self.lock.get_lock();
+            // これが無ければビルドエラー(`abort`リンクエラー)
+            if self.length < QUEUE_LENGTH {
+                self.q[self.length] = obj;
+            }
+            self.length += 1;
+            self.lock.unlock();
+            true
+        }
+    }
+
+    fn pop_after(&mut self, time: u32) -> Option<u32> {
+        if self.length == 0 {
+            None
+        } else if self.length > QUEUE_LENGTH {
+            None
+        } else {
+            self.lock.get_lock();
+            for i in 0..self.length {
+                // これが無ければビルドエラー(`abort`リンクエラー)
+                // i < self.length <= QUEUE_LENGTH は見てない? static mut だから?
+                if i < QUEUE_LENGTH {
+                    if self.q[i].tick <= time {
+                        let ret = self.q[i].ev;
+                        if i < self.length {
+                            for j in (i + 1)..self.length {
+                                if (0 < j) && (j < QUEUE_LENGTH) {
+                                    self.q[j - 1] = self.q[j];
+                                }
+                            }
+                        }
+                        self.length -= 1;
+                        self.lock.unlock();
+                        return Some(ret);
+                    }
+                }
+            }
+            self.lock.unlock();
+            None // 見つからなかった
+        }
+    }
+}
+
+/// キューに溜まっているイベントをスキャンして、
+/// time(通常は現在時刻 `hal::GetTick()`が渡される)が超過していたらイベント有り。Some(イベント)を返す。
+/// マッチするイベントがなければ None を返す。
+pub fn check_event(time: u32) -> Option<u32> {
+    unsafe { QUEUE.pop_after(time) }
+}
 
 
+/// delay[ms]後に向かってイベントを送る
+pub fn send(delay: u32, mask: u32, event :u32) -> () {
+    let obj = (mask & 0xffff0000) | (event & 0x0000ffff);
+    unsafe {
+        QUEUE.push(Event{tick: delay + hal::GetTick(), ev:obj});
+    }
+}
+```
+
+これを使えば、`main.rs`はこうなる。
+```
+#![no_std]
+#![no_main]
+#![feature(lang_items)]
+#![allow(non_snake_case)]
+
+extern crate stm32cubef1;
+use stm32cubef1::*;
+use gpio;
+use gpio::GPIOA;
+use pwr;
+use hal;
+
+mod lock;   // event.rs のために、トップレベル(main.rs)で mod lock; を呼ばなければならない。
+mod event;
+mod delay;
+
+const MASK_MAIN: u32 = 0x00010000;
+const EVENT_BUTTON: u32 = 0x0001;
+const EVENT_LED_ON: u32 = 0x0002;
+const EVENT_LED_OFF: u32 = 0x0003;
+
+#[no_mangle]
+pub extern "C" fn rust_main() {
+    let mut mode = 1000;
+
+    GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
+    delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
+
+    loop {
+        match event::catch(MASK_MAIN) {
+            Some(EVENT_BUTTON) => {
+                if mode == 1000 {
+                    mode = 200;
+                } else {
+                    mode = 1000;
+                }
+            },
+            Some(EVENT_LED_ON) => {
+                GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
+                delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
+            },
+            Some(EVENT_LED_OFF) => {
+                GPIOA().WritePin(gpio::PIN_5, gpio::Level::Low);
+                delay::send(mode, MASK_MAIN, EVENT_LED_ON);
+            },
+            _ => {},
+        }
+
+        pwr::EnterSLEEPMode(pwr::SLEEPENTRY_WFI);
+    }
+
+}
+
+#[no_mangle]
+pub extern "C" fn HAL_SYSTICK_Callback() {
+    if let Some(ev) = delay::check_event(hal::GetTick()) {
+        event::send(ev,ev);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn HAL_GPIO_EXTI_Callback(gpio_pin: u16) {
+    if gpio_pin == gpio::PIN_13 {
+        event::send(MASK_MAIN, EVENT_BUTTON);
+    }
+}
+```
+* `main.rs`から `unsafe`が消えた。
+  + `event.rs`、`delay.rs`はグローバルにひとつのキューを持つので、そこは`unsafe`が必要。
+  + 外部からは隠蔽されている。
+* `HAL_SYSTICK_Callback()`は`delay.rs`に置きたかったのだが、うまく行かない。
+* イベントが const で実装されていて美しくない。Enum にしたいね。
+* `delay.rs`は、SysTickのオーバーフローを考慮できていない。
+  + このままでは、1[ms]*2^32=49.7[day]後に誤動作する。昔のWindowsみたいだ。
+  + 比較方法を改良すれば対応できるが、今はサボっている。
+
+  
