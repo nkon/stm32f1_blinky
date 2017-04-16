@@ -1,5 +1,5 @@
 
-// use core::sync::atomic::AtomicIsize; なぜか使えないので、enum Lock を実装する。
+// use core::sync::atomic::AtomicBool; が、なぜか使えないので、enum Lock を実装する。
 
 pub enum Lock {
     Locked,

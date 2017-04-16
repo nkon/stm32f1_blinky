@@ -22,15 +22,13 @@ const EVENT_BUTTON: u32 = 0x0001;
 pub extern "C" fn rust_main() {
     let mut mode = 1000;
     loop {
-        match event::catch(MASK_MAIN) {
-            Some(EVENT_BUTTON) => {
-                if mode == 1000 {
-                    mode = 200;
-                } else {
-                    mode = 1000;
-                }
-            },
-            _ => (),
+        // if let 構文を使う。
+        if let Some(EVENT_BUTTON) = event::catch(MASK_MAIN) {
+            if mode == 1000 {
+                mode = 500;
+            } else {
+                mode = 1000;
+            }
         }
 
         unsafe {MODE = mode;}
