@@ -9,6 +9,7 @@ use gpio;
 use gpio::GPIOA;
 use pwr;
 use hal;
+use uart;
 
 mod lock;   // event.rs のために、トップレベル(main.rs)で mod lock; を呼ばなければならない。
 mod event;
@@ -19,9 +20,14 @@ const EVENT_BUTTON: u32 = 0x0001;
 const EVENT_LED_ON: u32 = 0x0002;
 const EVENT_LED_OFF: u32 = 0x0003;
 
+extern {
+    static mut huart2 : uart::HandleTypeDef;
+}
+
 #[no_mangle]
 pub extern "C" fn rust_main() {
     let mut mode = 1000;
+    let mut send_str = "slow";
 
     GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
     delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
@@ -31,18 +37,22 @@ pub extern "C" fn rust_main() {
             Some(EVENT_BUTTON) => {
                 if mode == 1000 {
                     mode = 200;
+                    send_str = "fast";
                 } else {
                     mode = 1000;
+                    send_str = "slow";
                 }
             },
             Some(EVENT_LED_ON) => {
                 GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
                 delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
+                unsafe {huart2.Transmit_IT(send_str);}
             },
             Some(EVENT_LED_OFF) => {
                 GPIOA().WritePin(gpio::PIN_5, gpio::Level::Low);
                 delay::send(mode, MASK_MAIN, EVENT_LED_ON);
-            },
+                unsafe {huart2.Transmit_IT(send_str);}
+              },
             _ => {},
         }
 

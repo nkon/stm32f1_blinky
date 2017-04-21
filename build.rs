@@ -19,11 +19,12 @@ fn main() {
     ];
 
     let srcs = [
-        [&format!("cubemx/Src"), "gpio.c"],
         [&format!("cubemx/Src"), "stm32f1xx_hal_msp.c"],
         [&format!("cubemx/Src"), "stm32f1xx_it.c"],
         [&format!("cubemx/Src"), "system_stm32f1xx.c"],
-        [&format!("cubemx/Src"), "main.c"]
+        [&format!("cubemx/Src"), "main.c"],
+        [&format!("cubemx/Src"), "gpio.c"],
+        [&format!("cubemx/Src"), "usart.c"],
     ];
 
     let mut objs: Vec<String> = Vec::new();
