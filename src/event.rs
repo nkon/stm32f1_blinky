@@ -42,24 +42,19 @@ impl Queue {
                 // これが無ければビルドエラー(`abort`リンクエラー)
                 // i < self.length <= QUEUE_LENGTH は見てない? static mut だから?
                 if i < QUEUE_LENGTH {
-                    // マッチした時は、イベントを消す。
-                    if (self.q[i] & 0xffff0000) == (mask & 0xffff0000) {
-                        let ret = self.q[i] & 0x0000ffff;
-                        if i < self.length {    // キューを詰める
-                            for j in (i + 1)..self.length {
-                                if (0 < j) && (j < QUEUE_LENGTH) {
-                                    self.q[j - 1] = self.q[j];
+                    if (self.q[i] & mask) != 0 {          // マスクがマッチしたら
+                        self.q[i] = self.q[i] & !mask;    // ビットを落とす
+                        let ret = self.q[i] & 0x0000ffff; // イベントを返す
+                        if self.q[i] & 0xffff0000 == 0 {  // マスクが空なら
+                            if i < self.length {          // キューを詰める
+                                for j in (i + 1)..self.length {
+                                    if (0 < j) && (j < QUEUE_LENGTH) {
+                                        self.q[j - 1] = self.q[j];
+                                    }
                                 }
                             }
+                            self.length -= 1;
                         }
-                        self.length -= 1;
-                        self.lock.unlock();
-                        return Some(ret);
-
-                    // そうで無ければ、フラグを落とす。
-                    } else if (self.q[i] & mask) != 0 {
-                        let ret = self.q[i] & 0x0000ffff;
-                        self.q[i] = self.q[i] & !mask;
                         self.lock.unlock();
                         return Some(ret);
                     }

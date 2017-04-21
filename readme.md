@@ -425,7 +425,7 @@ deactivate event_queue
 
 ### lock.rs
 
-排他制御のための簡単なコード。マニュアルでは `core::sync::atomic::AtomicBool`が使えそうなのだが、現時点ではうまく使えていない。
+排他制御のための簡単なコード。マニュアルでは `core::sync::atomic::AtomicBool`が使えそうなのだが、現時点ではうまく使えていない。[cortex-m3(thumbv6m)では Atomic 命令が無いから使えないっぽい](https://github.com/rust-lang-nursery/compiler-builtins/issues/114)。
 
 ```
 pub enum Lock {
@@ -632,6 +632,8 @@ pub extern "C" fn HAL_GPIO_EXTI_Callback(gpio_pin: u16) {
 ### delay.rs
 
 `HAL_SYSTICK_Callback()`でいろいろな、具体的作業をしているのは好ましくない。遅延イベントを実装して、SysTickは、それをハンドリングさせる。
+
+今の実装は、非常に効率が悪い。sort すればだいぶマシになるだろう。
 
 ```
 use lock::Lock;
