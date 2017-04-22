@@ -24,6 +24,10 @@ extern {
     static mut huart2 : uart::HandleTypeDef;
 }
 
+pub fn HUART2() -> &'static mut uart::HandleTypeDef {
+    unsafe { &mut huart2 }
+}
+
 #[no_mangle]
 pub extern "C" fn rust_main() {
     let mut mode = 1000;
@@ -46,12 +50,12 @@ pub extern "C" fn rust_main() {
             Some(EVENT_LED_ON) => {
                 GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
                 delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
-                unsafe {huart2.Transmit_IT(send_str);}
+                HUART2().Transmit_IT(send_str);
             },
             Some(EVENT_LED_OFF) => {
                 GPIOA().WritePin(gpio::PIN_5, gpio::Level::Low);
                 delay::send(mode, MASK_MAIN, EVENT_LED_ON);
-                unsafe {huart2.Transmit_IT(send_str);}
+                HUART2().Transmit_IT(send_str);
               },
             _ => {},
         }

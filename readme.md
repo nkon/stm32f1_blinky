@@ -826,3 +826,29 @@ fn is_after(target:u32, now:u32) -> bool {
 }
 ```
 ![is_after.png](is_after.png)
+
+## UART の送受信
+
+ライブラリで HAL UART のラッパを作ったので、UART 通信ができる。
+
+Nucleo ボードは、USART2 の端子が ST-Link とつながっている。それが、PC側からは USB上の UART と見える。Linux からだと gtkterm などで /dev/ttyACM0 にアクセスすれば良い。
+
+```
+extern {
+    static mut huart2 : uart::HandleTypeDef;
+}
+
+pub fn HUART2() -> &'static mut uart::HandleTypeDef {
+    unsafe { &mut huart2 }
+}
+```
+と、CubeMXが生成した usart.c 内で確保されているハンドル構造体への参照を作っておいて、次のように書き込む。
+直接 `huart2`へアクセスしても良いが、そのたびに `unsafe`が必要になる。一旦参照を返す関数を通し、そこで`unsafe`するようにした。
+```
+     HUART2().Transmit_IT(send_str);
+```
+
+どのみち、HALが提供する `UART_HandleTypeDef`ベースのAPIは問題が多く、自作しなおした方が良さそうだ。
+
+
+
