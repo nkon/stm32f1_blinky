@@ -21,18 +21,18 @@ const EVENT_LED_ON: u32 = 0x0002;
 const EVENT_LED_OFF: u32 = 0x0003;
 const EVENT_TX_OKOK: u32 = 0x0004;
 
+// macro を使えば???
 extern {
-    static mut huart2 : uart::HandleTypeDef;
+    static mut huart2 : uart::Handle;
 }
 
-pub fn HUART2() -> &'static mut uart::HandleTypeDef {
+pub fn HUART2() -> &'static mut uart::Handle {
     unsafe { &mut huart2 }
 }
 
 #[no_mangle]
 pub extern "C" fn rust_main() {
     let mut mode = 1000;
-    let mut send_str = "slow";
 
     GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
     delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
@@ -43,11 +43,9 @@ pub extern "C" fn rust_main() {
             Some(EVENT_BUTTON) => {
                 if mode == 1000 {
                     mode = 200;
-                    send_str = "fast";
                     HUART2().Transmit_IT("ok2");
                 } else {
                     mode = 1000;
-                    send_str = "slow";
                     HUART2().Transmit_IT("ok3");
                     delay::send(100, MASK_MAIN, EVENT_TX_OKOK);
                     delay::send(200, MASK_MAIN, EVENT_TX_OKOK);

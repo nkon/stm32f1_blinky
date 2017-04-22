@@ -5,56 +5,56 @@ const QUEUE_LENGTH: usize = 32;
 
 struct Queue {
     q: [u32; QUEUE_LENGTH],
-    length: usize,
+    len: usize,
     lock: Lock,
 }
 
 static mut QUEUE: Queue = Queue {
     q: [0; QUEUE_LENGTH],
-    length: 0,
+    len: 0,
     lock: Lock::Unlocked,
 };
 
 impl Queue {
     fn push(&mut self, obj: u32) -> bool {
-        if self.length >= QUEUE_LENGTH - 1 {
+        if self.len >= QUEUE_LENGTH - 1 {
             false
         } else {
             self.lock.get_lock();
             // これが無ければビルドエラー(`abort`リンクエラー)
-            if self.length < QUEUE_LENGTH {
-                self.q[self.length] = obj;
+            if self.len < QUEUE_LENGTH {
+                self.q[self.len] = obj;
             }
-            self.length += 1;
+            self.len += 1;
             self.lock.unlock();
             true
         }
     }
 
     fn pop_match_first(&mut self, mask: u32) -> Option<u32> {
-        if self.length == 0 {
+        if self.len == 0 {
             None
-        } else if self.length > QUEUE_LENGTH {
+        } else if self.len > QUEUE_LENGTH {
             None
         } else {
             self.lock.get_lock();
-            for i in 0..self.length {
+            for i in 0..self.len {
                 // これが無ければビルドエラー(`abort`リンクエラー)
-                // i < self.length <= QUEUE_LENGTH は見てない? static mut だから?
+                // i < self.len <= QUEUE_LENGTH は見てない? static mut だから?
                 if i < QUEUE_LENGTH {
                     if (self.q[i] & mask) != 0 {          // マスクがマッチしたら
-//                        self.q[i] = self.q[i] & !mask;    // ビットを落とす
+                        self.q[i] = self.q[i] & !mask;    // ビットを落とす
                         let ret = self.q[i] & 0x0000ffff; // イベントを返す
-//                        if self.q[i] & 0xffff0000 == 0 {  // マスクが空なら
-                            if i < self.length {          // キューを詰める
-                                for j in (i + 1)..self.length {
+                        if self.q[i] & 0xffff0000 == 0 {  // マスクが空なら
+                            if i < self.len {          // キューを詰める
+                                for j in (i + 1)..self.len {
                                     if (0 < j) && (j < QUEUE_LENGTH) {
                                         self.q[j - 1] = self.q[j];
                                     }
                                 }
                             }
-                            self.length -= 1;
-//                        }
+                            self.len -= 1;
+                        }
                         self.lock.unlock();
                         return Some(ret);
                     }

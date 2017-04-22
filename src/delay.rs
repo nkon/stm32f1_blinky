@@ -12,88 +12,165 @@ struct Event {
 
 struct Queue {
     q: [Event; QUEUE_LENGTH],
-    length: usize,
+    len: usize,
     lock: Lock,
 }
 
 static mut QUEUE: Queue = Queue {
     q: [Event{tick:0,ev:0}; QUEUE_LENGTH],
-    length: 0,
+    len: 0,
     lock: Lock::Unlocked,
 };
 
 impl Queue {
+    fn clear(&mut self) -> &mut Self {
+        self.len = 0;
+        self
+    }
+
+    /// 末尾に要素を追加する。
     fn push(&mut self, obj: Event) -> bool {
-        if self.length >= QUEUE_LENGTH - 1 {
+        if self.len >= QUEUE_LENGTH - 1 {
             false
         } else {
             self.lock.get_lock();
             // これが無ければビルドエラー(`abort`リンクエラー)
-            if self.length < QUEUE_LENGTH {
-                self.q[self.length] = obj;
+            if self.len < QUEUE_LENGTH {
+                self.q[self.len] = obj;
             }
-            self.length += 1;
+            self.len += 1;
             self.lock.unlock();
             true
+        }
+    }
+
+    /// 先頭の要素を取り除いて返す。
+    fn shift(&mut self) -> Option<Event> {
+        if self.len == 0 {
+            None
+        } else {
+            self.lock.get_lock();
+            let ret = self.q[0];
+            for i in 1..self.len {
+                self.q[i-1] = self.q[i];
+            }
+            self.len += 1;
+            self.lock.unlock();
+            Some(ret)
+        }
+
+    }
+
+    /// 要素を挿入する。
+    fn insert(&mut self, index: usize, obj: Event) -> Option<&mut Self> {
+        if self.len >= QUEUE_LENGTH {
+            None
+        } else if index >= self.len {
+            None
+        } else {
+            self.lock.get_lock();
+            if index == self.len || self.len == 0 {
+                self.push(obj);
+            } else {
+                self.len += 1;
+                let mut i = self.len;
+                loop {
+                    if i == index {
+                        break;
+                    }
+                    if (i > 0) && (i < QUEUE_LENGTH) {
+                        self.q[i] = self.q[i-1];
+                    }
+                    i -= 1;
+                }
+                self.q[index] = obj;
+            }
+            self.lock.unlock();
+            Some(self)
         }
     }
 
     fn sort_insert(&mut self, obj: Event) -> bool {
-        if self.length >= QUEUE_LENGTH {
+        if self.len >= QUEUE_LENGTH {
             false
-        } else if self.length == 0 {
+        } else if self.len == 0 {
             self.push(obj);
             true
         } else {
             self.lock.get_lock();
-            if self.length > 0 {
-                let mut i = self.length-1;
-                loop {
-                    if i < QUEUE_LENGTH-1 {
-                        if is_after(self.q[i].tick, obj.tick) {
-                            self.q[i+1] = obj;
-                            break;
-                        } else {
-                            self.q[i+1] = self.q[i];
-                            if i == 0 {
-                                self.q[0] = obj;
-                                break;
-                            } else {
-                                i -= 1;
-                            }
-                        }
+            let mut i = self.len-1;
+            loop {
+                if is_after(self.q[i].tick, obj.tick) {
+                    self.q[i+1] = obj;
+                    break;
+                } else {
+                    self.q[i+1] = self.q[i];
+                    if i == 0 {
+                        self.q[0] = obj;
+                        break;
+                    } else {
+                        i -= 1;
                     }
                 }
             }
-            self.length += 1;
+            self.len += 1;
             self.lock.unlock();
             true
         }
     }
 
-    fn pop_after(&mut self, time: u32) -> Option<u32> {
-        if self.length == 0 {
+    /// 要素を取り除いて返す。
+    fn remove(&mut self, index: usize) -> Option<Event> {
+        if self.len == 0 {
             None
-        } else if self.length > QUEUE_LENGTH {
+        } else if self.len > QUEUE_LENGTH {
+            None
+        } else if index >= self.len {
             None
         } else {
             self.lock.get_lock();
-            for i in 0..self.length {
+            if index < QUEUE_LENGTH {
+                let ret = self.q[index];
+                if self.len > 0 {
+                    self.len -= 1;
+                    for i in index..self.len {
+                        if i < (QUEUE_LENGTH-1) {
+                            self.q[i] = self.q[i+1];
+                        }
+                    }
+                }
+                self.lock.unlock();
+                Some(ret)
+            } else {
+                None
+            }
+        }
+    }
+
+    fn pop_after(&mut self, time: u32) -> Option<u32> {
+        if self.len == 0 {
+            None
+        } else if self.len > QUEUE_LENGTH {
+            None
+        } else {
+            self.lock.get_lock();
+            for i in 0..self.len {
                 // これが無ければビルドエラー(`abort`リンクエラー)
-                // i < self.length <= QUEUE_LENGTH は見てない? static mut だから?
+                // i < self.len <= QUEUE_LENGTH は見てない? static mut だから?
                 if i < QUEUE_LENGTH {
                     if is_after(self.q[i].tick, time) {
                         let ret = self.q[i].ev;
-                        if i < self.length {    // キューを詰める
-                            for j in (i + 1)..self.length {
+                        if i < self.len {    // キューを詰める
+                            for j in (i + 1)..self.len {
                                 if (0 < j) && (j < QUEUE_LENGTH) {
                                     self.q[j - 1] = self.q[j];
                                 }
                             }
                         }
-                        self.length -= 1;
+                        self.len -= 1;
                         self.lock.unlock();
                         return Some(ret);
+//                        return Some(self.remove(i).unwrap().ev);
                     }
                 }
             }
