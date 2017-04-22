@@ -43,9 +43,9 @@ impl Queue {
                 // i < self.length <= QUEUE_LENGTH は見てない? static mut だから?
                 if i < QUEUE_LENGTH {
                     if (self.q[i] & mask) != 0 {          // マスクがマッチしたら
-                        self.q[i] = self.q[i] & !mask;    // ビットを落とす
+//                        self.q[i] = self.q[i] & !mask;    // ビットを落とす
                         let ret = self.q[i] & 0x0000ffff; // イベントを返す
-                        if self.q[i] & 0xffff0000 == 0 {  // マスクが空なら
+//                        if self.q[i] & 0xffff0000 == 0 {  // マスクが空なら
                             if i < self.length {          // キューを詰める
                                 for j in (i + 1)..self.length {
                                     if (0 < j) && (j < QUEUE_LENGTH) {
@@ -54,7 +54,7 @@ impl Queue {
                                 }
                             }
                             self.length -= 1;
-                        }
+//                        }
                         self.lock.unlock();
                         return Some(ret);
                     }

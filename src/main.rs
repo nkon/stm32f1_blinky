@@ -19,6 +19,7 @@ const MASK_MAIN: u32 = 0x00010000;
 const EVENT_BUTTON: u32 = 0x0001;
 const EVENT_LED_ON: u32 = 0x0002;
 const EVENT_LED_OFF: u32 = 0x0003;
+const EVENT_TX_OKOK: u32 = 0x0004;
 
 extern {
     static mut huart2 : uart::HandleTypeDef;
@@ -35,6 +36,7 @@ pub extern "C" fn rust_main() {
 
     GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
     delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
+    HUART2().Transmit_IT("ok1");
 
     loop {
         match event::catch(MASK_MAIN) {
@@ -42,20 +44,29 @@ pub extern "C" fn rust_main() {
                 if mode == 1000 {
                     mode = 200;
                     send_str = "fast";
+                    HUART2().Transmit_IT("ok2");
                 } else {
                     mode = 1000;
                     send_str = "slow";
+                    HUART2().Transmit_IT("ok3");
+                    delay::send(100, MASK_MAIN, EVENT_TX_OKOK);
+                    delay::send(200, MASK_MAIN, EVENT_TX_OKOK);
+                    delay::send(1100, MASK_MAIN, EVENT_TX_OKOK);
+                    delay::send(1200, MASK_MAIN, EVENT_TX_OKOK);                    
                 }
             },
             Some(EVENT_LED_ON) => {
                 GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
                 delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
-                HUART2().Transmit_IT(send_str);
+                HUART2().Transmit_IT("ok4");
             },
             Some(EVENT_LED_OFF) => {
                 GPIOA().WritePin(gpio::PIN_5, gpio::Level::Low);
                 delay::send(mode, MASK_MAIN, EVENT_LED_ON);
-                HUART2().Transmit_IT(send_str);
+                HUART2().Transmit_IT("ok5");
+              },
+            Some(EVENT_TX_OKOK) => {
+                HUART2().Transmit_IT("OKOK");
               },
             _ => {},
         }

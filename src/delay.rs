@@ -38,6 +38,39 @@ impl Queue {
         }
     }
 
+    fn sort_insert(&mut self, obj: Event) -> bool {
+        if self.length >= QUEUE_LENGTH {
+            false
+        } else if self.length == 0 {
+            self.push(obj);
+            true
+        } else {
+            self.lock.get_lock();
+            if self.length > 0 {
+                let mut i = self.length-1;
+                loop {
+                    if i < QUEUE_LENGTH-1 {
+                        if is_after(self.q[i].tick, obj.tick) {
+                            self.q[i+1] = obj;
+                            break;
+                        } else {
+                            self.q[i+1] = self.q[i];
+                            if i == 0 {
+                                self.q[0] = obj;
+                                break;
+                            } else {
+                                i -= 1;
+                            }
+                        }
+                    }
+                }
+            }
+            self.length += 1;
+            self.lock.unlock();
+            true
+        }
+    }
+
     fn pop_after(&mut self, time: u32) -> Option<u32> {
         if self.length == 0 {
             None
@@ -70,6 +103,7 @@ impl Queue {
     }
 }
 
+/// now が target より後なら true を返す。 
 fn is_after(target:u32, now:u32) -> bool {
     if (target < 0x4000_0000) && (now >= 0xc000_0000) {
         false
@@ -106,6 +140,7 @@ pub fn send(delay: u32, mask: u32, event :u32) -> () {
     }
     unsafe {
         QUEUE.push(Event{tick: delay + hal::GetTick(), ev:obj});
+//        QUEUE.sort_insert(Event{tick: delay + hal::GetTick(), ev:obj});
     }
 }
 
