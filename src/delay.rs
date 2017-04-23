@@ -4,12 +4,13 @@ use hal;
 
 const QUEUE_LENGTH: usize = 32;
 
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Event {
     tick: u32,
     ev: u32,
 }
 
+#[derive(Debug)]
 struct Queue {
     q: [Event; QUEUE_LENGTH],
     len: usize,

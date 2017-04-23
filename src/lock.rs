@@ -1,6 +1,7 @@
 
 // use core::sync::atomic::AtomicBool; が、なぜか使えないので、enum Lock を実装する。
 
+#[derive(Debug)]
 pub enum Lock {
     Locked,
     Unlocked,

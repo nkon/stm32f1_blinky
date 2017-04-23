@@ -3,6 +3,7 @@ use lock::Lock;
 
 const QUEUE_LENGTH: usize = 32;
 
+#[derive(Debug)]
 struct Queue {
     q: [u32; QUEUE_LENGTH],
     len: usize,
