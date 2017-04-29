@@ -217,8 +217,8 @@ pub fn send(delay: u32, mask: u32, event :u32) -> () {
         return;
     }
     unsafe {
-        QUEUE.push(Event{tick: delay + hal::GetTick(), ev:obj});
-//        QUEUE.sort_insert(Event{tick: delay + hal::GetTick(), ev:obj});
+//        QUEUE.push(Event{tick: delay + hal::GetTick(), ev:obj});
+        QUEUE.sort_insert(Event{tick: delay + hal::GetTick(), ev:obj});
     }
 }
 

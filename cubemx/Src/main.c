@@ -57,7 +57,7 @@ void Error_Handler(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-
+void rust_begin_unwind(void){}
 /* USER CODE END 0 */
 
 int main(void)

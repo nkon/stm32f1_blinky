@@ -95,3 +95,6 @@ pub fn panic_fmt() -> ! {
 
 #[lang="eh_personality"]
 extern "C" fn eh_personality() {}
+
+#[no_mangle]
+pub fn abort() {}
