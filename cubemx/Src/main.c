@@ -58,6 +58,14 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN 0 */
 void rust_begin_unwind(void){}
+void memcpy_offset(unsigned char *dst, const unsigned char *src, unsigned char len, unsigned char offset)
+{
+  while(len--){
+    *(dst+offset) = *src;
+    dst++;
+    src++;
+  }
+}
 /* USER CODE END 0 */
 
 int main(void)

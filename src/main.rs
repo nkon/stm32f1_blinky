@@ -10,6 +10,7 @@ use gpio::GPIOA;
 use pwr;
 use hal;
 use uart;
+use queue;
 
 mod lock;   // event.rs のために、トップレベル(main.rs)で mod lock; を呼ばなければならない。
 mod event;
@@ -43,10 +44,11 @@ pub extern "C" fn rust_main() {
             Some(EVENT_BUTTON) => {
                 if mode == 1000 {
                     mode = 200;
-                    HUART2().Transmit_IT("ok2");
+                    HUART2().SetBuffer();
+                    HUART2().Transmit_Q("OK2".as_bytes());
                 } else {
                     mode = 1000;
-                    HUART2().Transmit_IT("ok3");
+//                    HUART2().Transmit_IT("ok3");
                     delay::send(100, MASK_MAIN, EVENT_TX_OKOK);
                     delay::send(200, MASK_MAIN, EVENT_TX_OKOK);
                     delay::send(1100, MASK_MAIN, EVENT_TX_OKOK);
@@ -56,15 +58,15 @@ pub extern "C" fn rust_main() {
             Some(EVENT_LED_ON) => {
                 GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
                 delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
-                HUART2().Transmit_IT("ok4");
+//                HUART2().Transmit_IT("ok4");
             },
             Some(EVENT_LED_OFF) => {
                 GPIOA().WritePin(gpio::PIN_5, gpio::Level::Low);
                 delay::send(mode, MASK_MAIN, EVENT_LED_ON);
-                HUART2().Transmit_IT("ok5");
+//                HUART2().Transmit_IT("ok5");
               },
             Some(EVENT_TX_OKOK) => {
-                HUART2().Transmit_IT("OKOK");
+//                HUART2().Transmit_IT("OKOK");
               },
             _ => {},
         }
