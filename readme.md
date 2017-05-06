@@ -851,4 +851,73 @@ pub fn HUART2() -> &'static mut uart::HandleTypeDef {
 どのみち、HALが提供する `UART_HandleTypeDef`ベースのAPIは問題が多く、自作しなおした方が良さそうだ。
 
 
+## gdb-dashboard
+
+Rust でビジュアルにデバッグする方法として VS-Code を使うやり方については、すでに述べた。[https://github.com/nkon/rust_blinky#vs-code-%E3%81%A7%E3%81%AE%E3%83%87%E3%83%90%E3%83%83%E3%82%B0]()
+
+別の方法として、gdb-dashboard を使う方法がある。
+
+* gdb-dashboard をダウンロードして ./.gdbinit に保存する。[https://github.com/cyrus-and/gdb-dashboard]()
+* 別の端末で OpenOCD を起動しておく。
+```
+$ openocd -f board/st_nucleo_f103rb.cfg
+```
+* 通常どおり gdb を起動して、`source .gdbinit`する。⇒プロンプトが`>>>`に変わる。
+```
+$ arm-none-eabi-gdb target/thumbv6m-none-eabi/debug/stm32f1_blinky
+GNU gdb (7.10-1ubuntu3+9) 7.10
+〜〜〜〜〜起動メッセージ〜〜〜〜〜
+(gdb) source .gdbinit
+>>> 
+```
+* openocd と接続する。
+```
+>>> target remote localhost:3333
+Remote debugging using localhost:3333
+stm32f1_blinky::rust_main () at src/main.rs:47
+47	                    HUART2().SetBuffer();
+─── Assembly ───────────────────────────────────────────────────────────────────
+0x080060bc stm32f1_blinky::rust_main+108 cmp	r0, r5
+0x080060be stm32f1_blinky::rust_main+110 bne.n	0x80060ee <stm32f1_blinky::rust_main+158>
+0x080060c0 stm32f1_blinky::rust_main+112 ldr	r4, [pc, #224]	; (0x80061a4 <stm32f1_blinky::rust_main+340>)
+0x080060c2 stm32f1_blinky::rust_main+114 mov	r0, r4
+0x080060c4 stm32f1_blinky::rust_main+116 bl	0x80063b8 <stm32cubef1::uart::{{impl}}::SetBuffer>
+0x080060c8 stm32f1_blinky::rust_main+120 movs	r2, #3
+0x080060ca stm32f1_blinky::rust_main+122 mov	r0, r4
+─── Expressions ────────────────────────────────────────────────────────────────
+─── History ────────────────────────────────────────────────────────────────────
+─── Memory ─────────────────────────────────────────────────────────────────────
+─── Registers ──────────────────────────────────────────────────────────────────
+  r0 0x000003e8   r1 0x00000080   r2 0x00000000   r3 0x00010001   r4 0x20000620
+  r5 0x000003e8   r6 0x20000004   r7 0x20004ff0   r8 0xffefbff9   r9 0xffcffbf6
+ r10 0x8b387e34  r11 0xdb7f749f  r12 0xffe8ffff   sp 0x20004fd0   lr 0x08006395
+  pc 0x080060c2 xPSR 0x61000000
+─── Source ─────────────────────────────────────────────────────────────────────
+42     loop {
+43         match event::catch(MASK_MAIN) {
+44             Some(EVENT_BUTTON) => {
+45                 if mode == 1000 {
+46                     mode = 200;
+47                     HUART2().SetBuffer();
+48                     HUART2().Transmit_Q("OK2".as_bytes());
+49                 } else {
+50                     mode = 1000;
+51 //                    HUART2().Transmit_IT("ok3");
+52                     delay::send(100, MASK_MAIN, EVENT_TX_OKOK);
+─── Stack ──────────────────────────────────────────────────────────────────────
+[0] from 0x080060c2 in stm32f1_blinky::rust_main+114 at src/main.rs:47
+(no arguments)
+[1] from 0x08000420 in main+24
+(no arguments)
+─── Threads ────────────────────────────────────────────────────────────────────
+[1] id 0 from 0x080060c2 in stm32f1_blinky::rust_main+114 at src/main.rs:47
+────────────────────────────────────────────────────────────────────────────────
+>>> 
+```
+* あとは、通常の gdb コマンドが使える。
+* MCU のレジスタが見れるのが便利。
+* シンタックスハイライトで `#???`が見にくい時は、`.gdbinit`で、syntax_hiliging が `'vim'`になっているところを`''`にすれば良い。
+* Cortex-M では、Memory window が使えない？　x コマンドは使えるが。
+
+![gdb-dashboard.png](gdb-dashboard.png)
 
