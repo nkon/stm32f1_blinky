@@ -857,7 +857,7 @@ Rust でビジュアルにデバッグする方法として VS-Code を使うや
 
 別の方法として、gdb-dashboard を使う方法がある。
 
-* gdb-dashboard をダウンロードして ./.gdbinit に保存する。[https://github.com/cyrus-and/gdb-dashboard]()
+* gdb-dashboard をダウンロードして ./.gdbinit に保存する[https://github.com/cyrus-and/gdb-dashboard]()。
 * 別の端末で OpenOCD を起動しておく。
 ```
 $ openocd -f board/st_nucleo_f103rb.cfg
@@ -917,7 +917,105 @@ stm32f1_blinky::rust_main () at src/main.rs:47
 * あとは、通常の gdb コマンドが使える。
 * MCU のレジスタが見れるのが便利。
 * シンタックスハイライトで `#???`が見にくい時は、`.gdbinit`で、syntax_hiliging が `'vim'`になっているところを`''`にすれば良い。
-* Cortex-M では、Memory window が使えない？　x コマンドは使えるが。
+* メモリを見るには `dashboard memory watch 0x20000620 40`など。引数は、開始アドレス、長さ。変数名(補完が効く)でも指定できる。表示スタイルは `.gdbinit`の`Memory::format_memory`でハードコードされているので、変更するにはオーバライドしてやる。
+* スタックの表示を増やすには `dashboard stack -style limit 15`など。
 
 ![gdb-dashboard.png](gdb-dashboard.png)
 
+## 構造体とスライス
+
+HAL_Uart には、次の構造体が使われる。
+
+``` 
+typedef struct
+{
+  USART_TypeDef                 *Instance;        /*!< UART registers base address        */
+  UART_InitTypeDef              Init;             /*!< UART communication parameters      */
+  uint8_t                       *pTxBuffPtr;      /*!< Pointer to UART Tx transfer Buffer */
+  uint16_t                      TxXferSize;       /*!< UART Tx Transfer size              */
+  uint16_t                      TxXferCount;      /*!< UART Tx Transfer Counter           */
+  uint8_t                       *pRxBuffPtr;      /*!< Pointer to UART Rx transfer Buffer */
+  uint16_t                      RxXferSize;       /*!< UART Rx Transfer size              */
+  uint16_t                      RxXferCount;      /*!< UART Rx Transfer Counter           */  
+  DMA_HandleTypeDef             *hdmatx;          /*!< UART Tx DMA Handle parameters      */
+  DMA_HandleTypeDef             *hdmarx;          /*!< UART Rx DMA Handle parameters      */
+  HAL_LockTypeDef               Lock;             /*!< Locking object                     */
+  __IO HAL_UART_StateTypeDef    State;            /*!< UART communication state           */
+  __IO uint32_t                 ErrorCode;        /*!< UART Error code                    */
+}UART_HandleTypeDef;
+```
+
+* `USART_TypeDef`は、ペリフェラルのレジスタへのポインタ。
+* `UART_InitTypeDef`は、ペリフェラルの初期設定値。
+* `HAL_LockTypeDef`は `enum`だが、調べてみると `u8`のサイズだった。
+* `HAL_UART_StateTypeDef`は `enum`だが、調べてみると `u8`のサイズだった。
+* `*pTxBuffPtr`、`*pRxBuffPtr`は、バッファへのポインタである。
+
+こいつに Rust からアクセスするための構造体を定義する。
+
+```
+#[repr(C)]
+pub struct Regs {
+    SR: u32, /* USART Status register */
+    DR: u32, /* USART Data register */
+    BRR: u32, /* USART Baud rate register */
+    CR1: u32, /* USART Control register 1 */
+    CR2: u32, /* USART Control register 2 */
+    CR3: u32, /* USART Control register 3 */
+    BTPR: u32, /* USART Guard time and prescaler register */
+}
+```
+いつものレジスタバンク構造体。
+
+```
+#[repr(C)]
+#[derive(Clone)]
+pub struct Init {
+    BaudRate: u32,
+    WordLength: u32,
+    StopBits: u32,
+    Parity: u32,
+    Mode: u32,
+    HwFlowCtl: u32,
+    OverSampling: u32,
+}
+```
+CubeMXがペリフェラルを初期化するのに使う構造体。CubeMXが初期化したのをコピーすると便利なので、`#[derive(Clone)]`も付けておく。
+
+```
+#[repr(C)]
+pub struct Handle {
+    Instance: &'static mut Regs,
+    pub Init: Init,
+    pTxBuffPtr: *mut u8,
+    TxXferSize: u16,
+    TxXferCount:u16,
+    pRxBuffPtr: *mut u8,
+    RxXferSize: u16,
+    RxXferCount: u16,
+    hdmatx: u32,
+    hdmarx: u32,
+    Lock: u8,
+    State: u8,
+    errorCode: u32,
+}
+```
+
+ここで注意すべきなのは、pTxBuffPtr(pRxBuffPtrも)がスライス(`&mut[u8]`)ではなく、生ポインタ(`*mut u8`)であること。スライスは、ポインタだけでなく領域の長さを管理するための領域を持つので、構造体に入れると配置がずれる⇒[Rust container cheat sheet](https://docs.google.com/presentation/d/1q-c7UAyrUlM-eZyTo1pd8SZ0qwA_wYxmPZVOQkoDmH4/edit#slide=id.p)。
+
+たまたまなのだが、スライスはポインタ(32bit)+サイズ(32bit)なので、`TxXferSize`が`u32`なら、うまく兼用出来たかもしれない。もしくは、バイトオーダを考慮して`TxXferCount`→`TxXferSize`の順か。面倒を見きれるなら、HALの構造体を修正しても良い。
+
+![slice.png](slice.png)
+
+Rustのポインタは、+/- の演算が出来ないので、スライスの途中にコピーしたいときは、補助関数が必要になる。とっても `unsafe`でダーティな領域だ。
+
+```
+void memcpy_offset(unsigned char *dst, const unsigned char *src, unsigned char len, unsigned char offset)
+{
+  while(len--){
+    *(dst+offset) = *src;
+    dst++;
+    src++;
+  }
+}
+```

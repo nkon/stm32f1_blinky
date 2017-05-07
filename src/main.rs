@@ -48,7 +48,7 @@ pub extern "C" fn rust_main() {
                     HUART2().Transmit_Q("OK2".as_bytes());
                 } else {
                     mode = 1000;
-//                    HUART2().Transmit_IT("ok3");
+                    HUART2().Transmit_IT("mode = 1000");
                     delay::send(100, MASK_MAIN, EVENT_TX_OKOK);
                     delay::send(200, MASK_MAIN, EVENT_TX_OKOK);
                     delay::send(1100, MASK_MAIN, EVENT_TX_OKOK);
