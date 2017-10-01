@@ -1019,3 +1019,9 @@ void memcpy_offset(unsigned char *dst, const unsigned char *src, unsigned char l
   }
 }
 ```
+
+
+# lazy static
+# queue 実装の共用
++ static mut の初期化
++ Syncが否定実装されている

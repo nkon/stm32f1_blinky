@@ -17,18 +17,13 @@ struct Queue {
     lock: Lock,
 }
 
-static mut QUEUE: Queue = Queue {
+static mut DELAY_QUEUE: Queue = Queue {
     q: [Event{tick:0,ev:0}; QUEUE_LENGTH],
     len: 0,
     lock: Lock::Unlocked,
 };
 
 impl Queue {
-    fn clear(&mut self) -> &mut Self {
-        self.len = 0;
-        self
-    }
-
     /// 末尾に要素を追加する。
     fn push(&mut self, obj: Event) -> bool {
         if self.len >= QUEUE_LENGTH - 1 {
@@ -42,52 +37,6 @@ impl Queue {
             self.len += 1;
             self.lock.unlock();
             true
-        }
-    }
-
-    /// 先頭の要素を取り除いて返す。
-    fn shift(&mut self) -> Option<Event> {
-        if self.len == 0 {
-            None
-        } else {
-            self.lock.get_lock();
-            let ret = self.q[0];
-            for i in 1..self.len {
-                self.q[i-1] = self.q[i];
-            }
-            self.len += 1;
-            self.lock.unlock();
-            Some(ret)
-        }
-
-    }
-
-    /// 要素を挿入する。
-    fn insert(&mut self, index: usize, obj: Event) -> Option<&mut Self> {
-        if self.len >= QUEUE_LENGTH {
-            None
-        } else if index >= self.len {
-            None
-        } else {
-            self.lock.get_lock();
-            if index == self.len || self.len == 0 {
-                self.push(obj);
-            } else {
-                self.len += 1;
-                let mut i = self.len;
-                loop {
-                    if i == index {
-                        break;
-                    }
-                    if (i > 0) && (i < QUEUE_LENGTH) {
-                        self.q[i] = self.q[i-1];
-                    }
-                    i -= 1;
-                }
-                self.q[index] = obj;
-            }
-            self.lock.unlock();
-            Some(self)
         }
     }
 
@@ -120,34 +69,6 @@ impl Queue {
         }
     }
 
-    /// 要素を取り除いて返す。
-    fn remove(&mut self, index: usize) -> Option<Event> {
-        if self.len == 0 {
-            None
-        } else if self.len > QUEUE_LENGTH {
-            None
-        } else if index >= self.len {
-            None
-        } else {
-            self.lock.get_lock();
-            if index < QUEUE_LENGTH {
-                let ret = self.q[index];
-                if self.len > 0 {
-                    self.len -= 1;
-                    for i in index..self.len {
-                        if i < (QUEUE_LENGTH-1) {
-                            self.q[i] = self.q[i+1];
-                        }
-                    }
-                }
-                self.lock.unlock();
-                Some(ret)
-            } else {
-                None
-            }
-        }
-    }
-
     fn pop_after(&mut self, time: u32) -> Option<u32> {
         if self.len == 0 {
             None
@@ -171,7 +92,6 @@ impl Queue {
                         self.len -= 1;
                         self.lock.unlock();
                         return Some(ret);
-//                        return Some(self.remove(i).unwrap().ev);
                     }
                 }
             }
@@ -205,7 +125,7 @@ fn is_after(target:u32, now:u32) -> bool {
 /// time(通常は現在時刻 `hal::GetTick()`が渡される)が超過していたらイベント有り。Some(イベント)を返す。
 /// マッチするイベントがなければ None を返す。
 pub fn check_event(time: u32) -> Option<u32> {
-    unsafe { QUEUE.pop_after(time) }
+    unsafe { DELAY_QUEUE.pop_after(time) }
 }
 
 
@@ -217,8 +137,7 @@ pub fn send(delay: u32, mask: u32, event :u32) -> () {
         return;
     }
     unsafe {
-//        QUEUE.push(Event{tick: delay + hal::GetTick(), ev:obj});
-        QUEUE.sort_insert(Event{tick: delay + hal::GetTick(), ev:obj});
+        DELAY_QUEUE.sort_insert(Event{tick: delay + hal::GetTick(), ev:obj});
     }
 }
 

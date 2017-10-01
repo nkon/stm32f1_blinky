@@ -10,7 +10,6 @@ use gpio::GPIOA;
 use pwr;
 use hal;
 use uart;
-use queue;
 use lock;
 
 mod event;
@@ -58,15 +57,15 @@ pub extern "C" fn rust_main() {
             Some(EVENT_LED_ON) => {
                 GPIOA().WritePin(gpio::PIN_5, gpio::Level::High);
                 delay::send(mode, MASK_MAIN, EVENT_LED_OFF);
-//                HUART2().Transmit_IT("ok4");
+                HUART2().Transmit_IT("ok4");
             },
             Some(EVENT_LED_OFF) => {
                 GPIOA().WritePin(gpio::PIN_5, gpio::Level::Low);
                 delay::send(mode, MASK_MAIN, EVENT_LED_ON);
-//                HUART2().Transmit_IT("ok5");
+                HUART2().Transmit_IT("ok5");
               },
             Some(EVENT_TX_OKOK) => {
-//                HUART2().Transmit_IT("OKOK");
+                HUART2().Transmit_IT("OKOK");
               },
             _ => {},
         }

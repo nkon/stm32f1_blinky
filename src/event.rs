@@ -10,7 +10,7 @@ struct Queue {
     lock: Lock,
 }
 
-static mut QUEUE: Queue = Queue {
+static mut EVENT_QUEUE: Queue = Queue {
     q: [0; QUEUE_LENGTH],
     len: 0,
     lock: Lock::Unlocked,
@@ -67,13 +67,14 @@ impl Queue {
     }
 }
 
-
 /// イベントを受信する。
 /// キューに溜まっているイベントをスキャンして、
 /// マスク部を OR して not 0 ならイベント有り。Some(イベント)を返す。
 /// マッチするイベントがなければ None を返す。
 pub fn catch(mask: u32) -> Option<u32> {
-    unsafe { QUEUE.pop_match_first(mask) }
+    unsafe {
+        EVENT_QUEUE.pop_match_first(mask)
+    }
 }
 
 
@@ -82,6 +83,6 @@ pub fn catch(mask: u32) -> Option<u32> {
 pub fn send(mask: u32, event: u32) -> () {
     let obj = (mask & 0xffff0000) | (event & 0x0000ffff);
     unsafe {
-        QUEUE.push(obj);
+        EVENT_QUEUE.push(obj);
     }
 }
