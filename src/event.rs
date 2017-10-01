@@ -22,10 +22,7 @@ impl Queue {
             false
         } else {
             self.lock.get_lock();
-            // これが無ければビルドエラー(`abort`リンクエラー)
-            if self.len < QUEUE_LENGTH {
-                self.q[self.len] = obj;
-            }
+            self.q[self.len] = obj;
             self.len += 1;
             self.lock.unlock();
             true
@@ -40,25 +37,21 @@ impl Queue {
         } else {
             self.lock.get_lock();
             for i in 0..self.len {
-                // これが無ければビルドエラー(`abort`リンクエラー)
-                // i < self.len <= QUEUE_LENGTH は見てない? static mut だから?
-                if i < QUEUE_LENGTH {
-                    if (self.q[i] & mask) != 0 {          // マスクがマッチしたら
-                        self.q[i] = self.q[i] & !mask;    // ビットを落とす
-                        let ret = self.q[i] & 0x0000ffff; // イベントを返す
-                        if self.q[i] & 0xffff0000 == 0 {  // マスクが空なら
-                            if i < self.len {          // キューを詰める
-                                for j in (i + 1)..self.len {
-                                    if (0 < j) && (j < QUEUE_LENGTH) {
-                                        self.q[j - 1] = self.q[j];
-                                    }
+                if (self.q[i] & mask) != 0 {          // マスクがマッチしたら
+                    self.q[i] = self.q[i] & !mask;    // ビットを落とす
+                    let ret = self.q[i] & 0x0000ffff; // イベントを返す
+                    if self.q[i] & 0xffff0000 == 0 {  // マスクが空なら
+                        if i < self.len {          // キューを詰める
+                            for j in (i + 1)..self.len {
+                                if (0 < j) && (j < QUEUE_LENGTH) {
+                                    self.q[j - 1] = self.q[j];
                                 }
                             }
-                            self.len -= 1;
                         }
-                        self.lock.unlock();
-                        return Some(ret);
+                        self.len -= 1;
                     }
+                    self.lock.unlock();
+                    return Some(ret);
                 }
             }
             self.lock.unlock();
