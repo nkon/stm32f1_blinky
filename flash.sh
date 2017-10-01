@@ -1,6 +1,7 @@
 #!/bin/sh
 
-DIR=target/thumbv6m-none-eabi/debug
+#DIR=target/thumbv6m-none-eabi/debug
+DIR=target/thumbv7m-none-eabi/debug
 
 PROJECT=stm32f1_blinky
 

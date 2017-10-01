@@ -11,8 +11,8 @@ use pwr;
 use hal;
 use uart;
 use queue;
+use lock;
 
-mod lock;   // event.rs のために、トップレベル(main.rs)で mod lock; を呼ばなければならない。
 mod event;
 mod delay;
 
@@ -44,8 +44,8 @@ pub extern "C" fn rust_main() {
             Some(EVENT_BUTTON) => {
                 if mode == 1000 {
                     mode = 200;
-                    HUART2().SetBuffer();
-                    HUART2().Transmit_Q("OK2".as_bytes());
+//                    HUART2().SetBuffer();
+//                    HUART2().Transmit_Q("OK2".as_bytes());
                 } else {
                     mode = 1000;
                     HUART2().Transmit_IT("mode = 1000");

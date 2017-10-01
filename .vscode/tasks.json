@@ -1,0 +1,29 @@
+{
+    "version": "0.1.0",
+    "command": "xargo",
+    "isShellCommand": true,
+    "showOutput": "always",
+    "suppressTaskName": true,
+    "tasks": [
+        {
+            "taskName": "xargo build",
+            "args": [
+                "build"
+            ],
+            "isBuildCommand": true
+        },
+        {
+            "taskName": "xargo run",
+            "args": [
+                "run"
+            ]
+        },
+        {
+            "taskName": "xargo test",
+            "args": [
+                "test"
+            ],
+            "isTestCommand": true
+        }
+    ]
+}
