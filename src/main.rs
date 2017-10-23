@@ -3,6 +3,12 @@
 #![feature(lang_items)]
 #![allow(non_snake_case)]
 
+#[macro_use]
+extern crate lazy_static;
+
+extern crate nostd_tool;
+use nostd_tool::lock;
+
 extern crate stm32cubef1;
 use stm32cubef1::*;
 use gpio;
@@ -10,7 +16,7 @@ use gpio::GPIOA;
 use pwr;
 use hal;
 use uart;
-use lock;
+//use lock;
 
 mod event;
 mod delay;
