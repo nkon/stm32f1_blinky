@@ -8,6 +8,7 @@ extern crate lazy_static;
 
 extern crate nostd_tool;
 use nostd_tool::lock;
+use nostd_tool::event;
 
 extern crate stm32cubef1;
 use stm32cubef1::*;
@@ -18,7 +19,7 @@ use hal;
 use uart;
 //use lock;
 
-mod event;
+//mod event;
 mod delay;
 
 const MASK_MAIN: u32 = 0x00010000;
